@@ -10,33 +10,102 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as MetricsRouteImport } from './routes/metrics'
+import { Route as AppealsCaseIdRouteImport } from './routes/appeals.$caseId'
+import { Route as ConsoleIndexRouteImport } from './routes/console.index'
+import { Route as ConsoleCaseIdRouteImport } from './routes/console.$caseId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetricsRoute = MetricsRouteImport.update({
+  id: '/metrics',
+  path: '/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppealsCaseIdRoute = AppealsCaseIdRouteImport.update({
+  id: '/appeals/$caseId',
+  path: '/appeals/$caseId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
+  id: '/console/',
+  path: '/console/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsoleCaseIdRoute = ConsoleCaseIdRouteImport.update({
+  id: '/console/$caseId',
+  path: '/console/$caseId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/metrics': typeof MetricsRoute
+  '/appeals/$caseId': typeof AppealsCaseIdRoute
+  '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/console/': typeof ConsoleIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/metrics': typeof MetricsRoute
+  '/appeals/$caseId': typeof AppealsCaseIdRoute
+  '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/console': typeof ConsoleIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/metrics': typeof MetricsRoute
+  '/appeals/$caseId': typeof AppealsCaseIdRoute
+  '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/console/': typeof ConsoleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/metrics'
+    | '/appeals/$caseId'
+    | '/console/$caseId'
+    | '/console/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/metrics'
+    | '/appeals/$caseId'
+    | '/console/$caseId'
+    | '/console'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/metrics'
+    | '/appeals/$caseId'
+    | '/console/$caseId'
+    | '/console/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  MetricsRoute: typeof MetricsRoute
+  AppealsCaseIdRoute: typeof AppealsCaseIdRoute
+  ConsoleCaseIdRoute: typeof ConsoleCaseIdRoute
+  ConsoleIndexRoute: typeof ConsoleIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +117,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metrics': {
+      id: '/metrics'
+      path: '/metrics'
+      fullPath: '/metrics'
+      preLoaderRoute: typeof MetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/appeals/$caseId': {
+      id: '/appeals/$caseId'
+      path: '/appeals/$caseId'
+      fullPath: '/appeals/$caseId'
+      preLoaderRoute: typeof AppealsCaseIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/console/': {
+      id: '/console/'
+      path: '/console'
+      fullPath: '/console/'
+      preLoaderRoute: typeof ConsoleIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/console/$caseId': {
+      id: '/console/$caseId'
+      path: '/console/$caseId'
+      fullPath: '/console/$caseId'
+      preLoaderRoute: typeof ConsoleCaseIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  MetricsRoute: MetricsRoute,
+  AppealsCaseIdRoute: AppealsCaseIdRoute,
+  ConsoleCaseIdRoute: ConsoleCaseIdRoute,
+  ConsoleIndexRoute: ConsoleIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
