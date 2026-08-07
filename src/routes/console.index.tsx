@@ -173,8 +173,8 @@ function ConsolePage() {
                     </td>
                     <td className="max-w-80 px-3 py-3">
                       <ul className="space-y-0.5 text-xs text-muted-foreground">
-                        {r.topSignals.map((s) => (
-                          <li key={s.key}>
+                        {r.topSignals.map((s, si) => (
+                          <li key={`${s.key}-${si}`}>
                             <span className="font-medium text-foreground">{s.label}</span>{" "}
                             <span className="num">+{s.contribution.toFixed(0)}</span>
                           </li>

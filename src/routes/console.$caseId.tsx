@@ -118,8 +118,8 @@ function CaseDetail() {
                 ))}
               </div>
               <ul className="mt-4 space-y-2">
-                {(s?.signals ?? []).map((sig) => (
-                  <li key={sig.key} className="rounded-md border border-border p-3">
+                {(s?.signals ?? []).map((sig, si) => (
+                  <li key={`${sig.key}-${si}`} className="rounded-md border border-border p-3">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-medium">{sig.label}</span>
                       <span className="num text-xs font-semibold text-primary">+{sig.contribution.toFixed(1)}</span>
