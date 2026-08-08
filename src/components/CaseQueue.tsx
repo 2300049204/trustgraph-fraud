@@ -244,9 +244,8 @@ export function CaseQueue({ basePath }: { basePath: "/cases" | "/console" }) {
                     </td>
                     <td className="px-3 py-3 text-xs">
                       <div className="font-medium">{r.primaryRule.replace(/_/g, " ")}</div>
-                      <div className="text-muted-foreground">
-                        {r.topSignals[0］ ? "" : ""}
-                      </div>
+                      <div className="text-muted-foreground">{r.topSignals[0]?.label ?? ""}</div>
+
                     </td>
                     <td className="px-3 py-3 text-xs">
                       {r.ringId ? (
