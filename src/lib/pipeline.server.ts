@@ -486,8 +486,9 @@ export async function getMetrics() {
       sb.from("cases").select("id,actor_id,status,created_at,updated_at,risk_score,recommended_action"),
     ]);
 
-  const blended = confusion(engine.scored, data.labels, RISK_THRESHOLD, true);
-  const txnOnly = confusion(engine.scored, data.labels, RISK_THRESHOLD, false);
+  const blended = confusion(engine.scored, data.labels, RISK_THRESHOLD, "blended");
+  const txnOnly = confusion(engine.scored, data.labels, RISK_THRESHOLD, "txn");
+  const graphOnly = confusion(engine.scored, data.labels, RISK_THRESHOLD, "graph");
 
   const fraudActors = new Set(data.labels.filter((l) => l.is_fraud).map((l) => l.actor_id));
   const caughtActors = new Set(
