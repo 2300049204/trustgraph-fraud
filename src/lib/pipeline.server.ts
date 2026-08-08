@@ -47,6 +47,7 @@ export interface QueueItem {
   ringId: string | null;
   ringMembers: string[];
   slaDeadline: string;
+  createdAt: string;
   status: string;
   features: Record<string, number>;
 }
@@ -58,7 +59,7 @@ export async function ensureCases(): Promise<{ items: QueueItem[]; scored: Score
   const flagged = engine.scored.filter((s) => s.riskScore >= 35);
   const sb = await admin();
 
-  const { data: existing } = await sb.from("cases").select("id,actor_id,status,sla_deadline");
+  const { data: existing } = await sb.from("cases").select("id,actor_id,status,sla_deadline,created_at");
   const byActor = new Map((existing ?? []).map((c) => [c.actor_id, c]));
 
   const missing = flagged.filter((s) => !byActor.has(s.actorId));
@@ -76,7 +77,7 @@ export async function ensureCases(): Promise<{ items: QueueItem[]; scored: Score
       sla_deadline: new Date(Date.now() + (((i * 7) % 96) - 12) * 3600_000).toISOString(),
     }));
     await sb.from("cases").insert(rows);
-    const { data: inserted } = await sb.from("cases").select("id,actor_id,status,sla_deadline");
+    const { data: inserted } = await sb.from("cases").select("id,actor_id,status,sla_deadline,created_at");
     (inserted ?? []).forEach((c) => byActor.set(c.actor_id, c));
 
     const evidence = missing.flatMap((s) => {
@@ -135,6 +136,7 @@ export async function ensureCases(): Promise<{ items: QueueItem[]; scored: Score
         ringId: s.ringId,
         ringMembers: s.ringMembers,
         slaDeadline: c.sla_deadline,
+        createdAt: c.created_at,
         status: c.status,
         features: s.features,
       },
