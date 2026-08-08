@@ -1,4 +1,14 @@
 import { Link } from "@tanstack/react-router";
+import {
+  Activity,
+  Bell,
+  FileWarning,
+  GitBranch,
+  LayoutDashboard,
+  Layers,
+  ScrollText,
+  ShieldCheck,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +35,23 @@ export function RiskPill({ score, showLabel = true }: { score: number; showLabel
     >
       <span className="num">{score.toFixed(0)}</span>
       {showLabel ? <span className="font-medium opacity-80">{band.label}</span> : null}
+    </span>
+  );
+}
+
+export function SeverityBadge({ severity }: { severity: string }) {
+  const map: Record<string, string> = {
+    critical: bandClass.critical!,
+    high: bandClass.high!,
+    medium: bandClass.medium!,
+    low: bandClass.low!,
+    hard: bandClass.critical!,
+    soft: bandClass.medium!,
+    info: "bg-muted text-muted-foreground",
+  };
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase ${map[severity] ?? map["info"]}`}>
+      {severity}
     </span>
   );
 }
@@ -59,6 +86,31 @@ export function SlaClock({ deadline }: { deadline: string }) {
   );
 }
 
+export function StateBlock({
+  kind,
+  title,
+  message,
+}: {
+  kind: "loading" | "error" | "empty";
+  title: string;
+  message?: string;
+}) {
+  if (kind === "loading")
+    return (
+      <div className="panel space-y-2 p-4" role="status" aria-live="polite">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-9 animate-pulse rounded bg-muted" />
+        ))}
+      </div>
+    );
+  return (
+    <div className={`panel p-8 text-center ${kind === "error" ? "border-destructive/40" : ""}`}>
+      <p className={`text-sm font-semibold ${kind === "error" ? "text-destructive" : "text-foreground"}`}>{title}</p>
+      {message ? <p className="mt-1 text-xs text-muted-foreground">{message}</p> : null}
+    </div>
+  );
+}
+
 export function useSession() {
   const [email, setEmail] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -75,57 +127,110 @@ export function useSession() {
   return { email, ready, signedIn: Boolean(email) };
 }
 
+const NAV = [
+  { to: "/", label: "Overview", icon: LayoutDashboard, exact: true },
+  { to: "/cases", label: "Cases", icon: FileWarning, exact: false },
+  { to: "/graph", label: "Graph Explorer", icon: GitBranch, exact: false },
+  { to: "/appeals", label: "Appeals", icon: ScrollText, exact: false },
+  { to: "/metrics", label: "Metrics", icon: Activity, exact: false },
+  { to: "/architecture", label: "Architecture", icon: Layers, exact: false },
+] as const;
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const { email } = useSession();
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-6 px-5">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded bg-primary text-primary-foreground text-xs font-bold">
-              TG
-            </span>
-            <span className="text-sm font-semibold tracking-tight">Trust Graph</span>
-          </Link>
-          <nav className="flex items-center gap-1 text-sm">
-            {[
-              { to: "/console", label: "Console" },
-              { to: "/metrics", label: "Metrics" },
-            ].map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                className="rounded px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                activeProps={{ className: "rounded px-2.5 py-1.5 bg-primary-soft text-primary font-medium" }}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-3 text-xs">
-            <span className="hidden items-center gap-1.5 sm:flex">
-              <span className="size-1.5 rounded-full bg-primary" />
-              <span className="text-muted-foreground">India region processing</span>
-            </span>
-            {email ? (
-              <span className="flex items-center gap-2">
-                <span className="text-muted-foreground">{email}</span>
-                <button
-                  className="rounded border border-border px-2 py-1 hover:bg-muted"
-                  onClick={() => supabase.auth.signOut()}
-                >
-                  Sign out
-                </button>
-              </span>
-            ) : (
-              <Link to="/auth" className="rounded bg-primary px-3 py-1.5 font-medium text-primary-foreground">
-                Investigator sign-in
-              </Link>
-            )}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-border bg-surface lg:flex">
+        <Link to="/" className="flex h-14 items-center gap-2 border-b border-border px-4">
+          <span className="grid size-7 place-items-center rounded bg-primary text-xs font-bold text-primary-foreground">
+            TG
+          </span>
+          <span className="text-sm font-semibold tracking-tight">Trust Graph</span>
+        </Link>
+        <nav className="flex-1 space-y-0.5 p-2">
+          {NAV.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              activeOptions={{ exact: l.exact }}
+              className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              activeProps={{
+                className: "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm bg-primary-soft text-primary font-medium",
+              }}
+            >
+              <l.icon className="size-4" aria-hidden />
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="border-t border-border p-3 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="size-3.5" aria-hidden />
+            Immutable audit trail
           </div>
+          <p className="mt-1">Every action, gate outcome and appeal decision is append-only.</p>
         </div>
-      </header>
-      {children}
+      </aside>
+
+      <div className="lg:pl-56">
+        <header className="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur">
+          <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
+            <Link to="/" className="flex items-center gap-2 lg:hidden">
+              <span className="grid size-7 place-items-center rounded bg-primary text-xs font-bold text-primary-foreground">
+                TG
+              </span>
+            </Link>
+            <nav className="flex items-center gap-1 overflow-x-auto text-sm lg:hidden">
+              {NAV.slice(1).map((l) => (
+                <Link
+                  key={l.to}
+                  to={l.to}
+                  className="whitespace-nowrap rounded px-2 py-1.5 text-muted-foreground hover:bg-muted"
+                  activeProps={{ className: "whitespace-nowrap rounded px-2 py-1.5 bg-primary-soft text-primary font-medium" }}
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="ml-auto flex items-center gap-3 text-xs">
+              <span className="hidden items-center gap-1.5 md:flex">
+                <span className="size-1.5 rounded-full bg-primary" />
+                <span className="text-muted-foreground">India region processing</span>
+              </span>
+              <span className="hidden items-center gap-1.5 md:flex" title="Engine, database and gateway reachable">
+                <span className="size-1.5 rounded-full bg-risk-low" />
+                <span className="text-muted-foreground">System operational</span>
+              </span>
+              <button
+                type="button"
+                aria-label="Notifications"
+                className="rounded border border-border p-1.5 text-muted-foreground hover:bg-muted"
+              >
+                <Bell className="size-3.5" aria-hidden />
+              </button>
+              {email ? (
+                <span className="flex items-center gap-2">
+                  <span className="grid size-6 place-items-center rounded-full bg-primary-soft text-[10px] font-semibold text-primary">
+                    {email.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="hidden text-muted-foreground sm:inline">{email}</span>
+                  <button
+                    className="rounded border border-border px-2 py-1 hover:bg-muted"
+                    onClick={() => supabase.auth.signOut()}
+                  >
+                    Sign out
+                  </button>
+                </span>
+              ) : (
+                <Link to="/auth" className="rounded bg-primary px-3 py-1.5 font-medium text-primary-foreground">
+                  Investigator sign-in
+                </Link>
+              )}
+            </div>
+          </div>
+        </header>
+        {children}
+      </div>
     </div>
   );
 }
