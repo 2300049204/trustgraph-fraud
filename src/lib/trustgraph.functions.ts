@@ -27,6 +27,16 @@ export const fetchMetrics = createServerFn({ method: "GET" }).handler(async () =
   return getMetrics();
 });
 
+export const fetchAppeals = createServerFn({ method: "GET" }).handler(async () => {
+  const { getAppeals } = await import("@/lib/pipeline.server");
+  return getAppeals();
+});
+
+export const fetchRings = createServerFn({ method: "GET" }).handler(async () => {
+  const { getRings } = await import("@/lib/pipeline.server");
+  return getRings();
+});
+
 export const explainCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ caseId: z.string().uuid() }).parse(d))

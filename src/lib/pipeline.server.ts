@@ -47,6 +47,7 @@ export interface QueueItem {
   ringId: string | null;
   ringMembers: string[];
   slaDeadline: string;
+  createdAt: string;
   status: string;
   features: Record<string, number>;
 }
@@ -58,7 +59,7 @@ export async function ensureCases(): Promise<{ items: QueueItem[]; scored: Score
   const flagged = engine.scored.filter((s) => s.riskScore >= 35);
   const sb = await admin();
 
-  const { data: existing } = await sb.from("cases").select("id,actor_id,status,sla_deadline");
+  const { data: existing } = await sb.from("cases").select("id,actor_id,status,sla_deadline,created_at");
   const byActor = new Map((existing ?? []).map((c) => [c.actor_id, c]));
 
   const missing = flagged.filter((s) => !byActor.has(s.actorId));
@@ -76,7 +77,7 @@ export async function ensureCases(): Promise<{ items: QueueItem[]; scored: Score
       sla_deadline: new Date(Date.now() + (((i * 7) % 96) - 12) * 3600_000).toISOString(),
     }));
     await sb.from("cases").insert(rows);
-    const { data: inserted } = await sb.from("cases").select("id,actor_id,status,sla_deadline");
+    const { data: inserted } = await sb.from("cases").select("id,actor_id,status,sla_deadline,created_at");
     (inserted ?? []).forEach((c) => byActor.set(c.actor_id, c));
 
     const evidence = missing.flatMap((s) => {
@@ -135,6 +136,7 @@ export async function ensureCases(): Promise<{ items: QueueItem[]; scored: Score
         ringId: s.ringId,
         ringMembers: s.ringMembers,
         slaDeadline: c.sla_deadline,
+        createdAt: c.created_at,
         status: c.status,
         features: s.features,
       },
@@ -189,6 +191,51 @@ export async function getCaseDetail(caseId: string) {
     IdentityIntelligence.disposableEmail(pii.data?.email ?? null),
   ]);
 
+  // Deterministic external-signal score derived from the adapter verdicts above.
+  const EXTERNAL_WEIGHT: Record<string, number> = {
+    "high abuse confidence": 40,
+    "some reports": 18,
+    clean: 0,
+    "cancelled / not found": 35,
+    "active registration": 0,
+    "not provided": 12,
+    "disposable domain": 25,
+    "durable domain": 0,
+  };
+  const externalScore = Math.min(
+    100,
+    external.reduce((sum, x) => sum + (EXTERNAL_WEIGHT[x.verdict] ?? 0), 0),
+  );
+
+  // Structured evidence items, each grounded in an engine signal or graph link.
+  const sev = (n: number) => (n >= 20 ? "critical" : n >= 12 ? "high" : n >= 6 ? "medium" : "low");
+  const structuredEvidence = [
+    ...(scored?.signals ?? []).map((sig) => ({
+      type: sig.label,
+      key: sig.key,
+      severity: sev(sig.contribution),
+      confidence: Math.min(0.99, sig.contribution / 30),
+      source: ["ring_density", "reciprocal_loop", "shared_device", "shared_ip", "shared_address"].some((k) =>
+        sig.key.includes(k),
+      )
+        ? "graph_analyst"
+        : "triage_scorer",
+      detail: sig.detail,
+      points: sig.contribution,
+      timestamp: row.created_at,
+    })),
+    ...external.map((x) => ({
+      type: x.provider,
+      key: x.provider.toLowerCase().replace(/\W+/g, "_"),
+      severity: sev(EXTERNAL_WEIGHT[x.verdict] ?? 0),
+      confidence: x.live ? 0.9 : 0.6,
+      source: x.live ? "external_live" : "external_simulated",
+      detail: `${x.verdict} — ${x.detail}`,
+      points: EXTERNAL_WEIGHT[x.verdict] ?? 0,
+      timestamp: row.created_at,
+    })),
+  ];
+
   return {
     case: row,
     scored: scored ?? null,
@@ -199,8 +246,75 @@ export async function getCaseDetail(caseId: string) {
     precision: precision ?? [],
     runs: runs ?? [],
     external,
+    externalScore,
+    structuredEvidence,
   };
 }
+
+/** Every appeal joined to its case and actor, for the appeals workbench. */
+export async function getAppeals() {
+  const sb = await admin();
+  const [{ data: appeals }, { data: cases }, { data: actors }, { data: actions }] = await Promise.all([
+    sb.from("appeals").select("*").order("created_at", { ascending: false }),
+    sb.from("cases").select("id,actor_id,risk_score,status,recommended_action"),
+    sb.from("actors").select("id,display_name,role"),
+    sb.from("case_actions").select("case_id,action_type,severity,created_at,gate_passed"),
+  ]);
+  const caseById = new Map((cases ?? []).map((c) => [c.id, c]));
+  const actorById = new Map((actors ?? []).map((a) => [a.id, a]));
+  return (appeals ?? []).map((a) => {
+    const c = caseById.get(a.case_id);
+    const actor = c ? actorById.get(c.actor_id) : undefined;
+    const acts = (actions ?? [])
+      .filter((x) => x.case_id === a.case_id)
+      .sort((x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime());
+    return {
+      ...a,
+      riskScore: c ? Number(c.risk_score) : null,
+      caseStatus: c?.status ?? null,
+      actorName: actor?.display_name ?? c?.actor_id ?? "unknown",
+      actorRole: actor?.role ?? null,
+      originalAction: acts[0]?.action_type ?? null,
+      originalSeverity: acts[0]?.severity ?? null,
+      actionTakenAt: acts[0]?.created_at ?? null,
+    };
+  });
+}
+
+/** Detected collusion rings with their member cases, for the graph explorer. */
+export async function getRings() {
+  const data = await loadRawData();
+  const engine = runEngine(data);
+  const sb = await admin();
+  const { data: cases } = await sb.from("cases").select("id,actor_id");
+  const caseByActor = new Map((cases ?? []).map((c) => [c.actor_id, c.id]));
+  return engine.rings.map((r) => {
+    const scores = r.members.map((m) => engine.byActor.get(m)?.riskScore ?? 0);
+    return {
+      id: r.id,
+      memberCount: r.members.length,
+      reciprocalLoops: r.reciprocalPairs,
+      fiveStarShare: r.fiveStarShare,
+      podFailures: r.podFailures,
+      relationships: r.attributes.reduce((s, a) => s + a.actors.length, 0),
+      attributes: r.attributes.map((a) => ({ kind: a.kind, value: a.value, actors: a.actors.length })),
+      riskScore: scores.length ? Math.round(Math.max(...scores)) : 0,
+      members: r.members.map((m) => {
+        const s = engine.byActor.get(m);
+        return {
+          actorId: m,
+          displayName: s?.displayName ?? m,
+          role: s?.role ?? "unknown",
+          riskScore: s?.riskScore ?? 0,
+          caseId: caseByActor.get(m) ?? null,
+        };
+      }),
+      graph: buildGraph(data, engine, r.members[0] ?? ""),
+    };
+  });
+}
+
+
 
 export async function getAppealView(caseId: string) {
   const sb = await admin();
@@ -486,8 +600,9 @@ export async function getMetrics() {
       sb.from("cases").select("id,actor_id,status,created_at,updated_at,risk_score,recommended_action"),
     ]);
 
-  const blended = confusion(engine.scored, data.labels, RISK_THRESHOLD, true);
-  const txnOnly = confusion(engine.scored, data.labels, RISK_THRESHOLD, false);
+  const blended = confusion(engine.scored, data.labels, RISK_THRESHOLD, "blended");
+  const txnOnly = confusion(engine.scored, data.labels, RISK_THRESHOLD, "txn");
+  const graphOnly = confusion(engine.scored, data.labels, RISK_THRESHOLD, "graph");
 
   const fraudActors = new Set(data.labels.filter((l) => l.is_fraud).map((l) => l.actor_id));
   const caughtActors = new Set(
@@ -503,6 +618,30 @@ export async function getMetrics() {
   }
   const fraudLossTotal = [...lossByActor.values()].reduce((a, b) => a + b, 0);
   const fraudLossAvoided = [...caughtActors].reduce((sum, id) => sum + (lossByActor.get(id) ?? 0), 0);
+
+  // Graph-rescued fraud: labelled fraud actors the transaction-only model would
+  // have missed at the same threshold, but the blended (graph) score catches.
+  const rescuedActors = engine.scored.filter(
+    (s) => fraudActors.has(s.actorId) && s.txnScore < RISK_THRESHOLD && s.riskScore >= RISK_THRESHOLD,
+  );
+  const rescuedLoss = rescuedActors.reduce((sum, s) => sum + (lossByActor.get(s.actorId) ?? 0), 0);
+  const rescued = {
+    count: rescuedActors.length,
+    loss: rescuedLoss,
+    shareOfCaught: caughtActors.size ? rescuedActors.length / caughtActors.size : 0,
+    actors: rescuedActors.slice(0, 12).map((s) => ({
+      actorId: s.actorId,
+      displayName: s.displayName,
+      role: s.role,
+      txnScore: s.txnScore,
+      graphScore: s.graphScore,
+      riskScore: s.riskScore,
+      ringId: s.ringId,
+      loss: lossByActor.get(s.actorId) ?? 0,
+    })),
+  };
+
+
 
   // fairness: action rate per cohort
   const actionedCases = new Set((actions ?? []).map((a) => a.case_id));
@@ -551,6 +690,8 @@ export async function getMetrics() {
     threshold: RISK_THRESHOLD,
     blended,
     txnOnly,
+    graphOnly,
+    rescued,
     lift: {
       precision: blended.precision - txnOnly.precision,
       recall: blended.recall - txnOnly.recall,
