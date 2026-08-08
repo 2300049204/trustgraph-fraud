@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as GraphRouteImport } from './routes/graph'
 import { Route as MetricsRouteImport } from './routes/metrics'
+import { Route as AppealsIndexRouteImport } from './routes/appeals.index'
 import { Route as AppealsCaseIdRouteImport } from './routes/appeals.$caseId'
 import { Route as CasesIndexRouteImport } from './routes/cases.index'
 import { Route as ConsoleIndexRouteImport } from './routes/console.index'
@@ -36,6 +37,11 @@ const GraphRoute = GraphRouteImport.update({
 const MetricsRoute = MetricsRouteImport.update({
   id: '/metrics',
   path: '/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppealsIndexRoute = AppealsIndexRouteImport.update({
+  id: '/appeals/',
+  path: '/appeals/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppealsCaseIdRoute = AppealsCaseIdRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/metrics': typeof MetricsRoute
   '/appeals/$caseId': typeof AppealsCaseIdRoute
   '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/appeals/': typeof AppealsIndexRoute
   '/cases/': typeof CasesIndexRoute
   '/console/': typeof ConsoleIndexRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/metrics': typeof MetricsRoute
   '/appeals/$caseId': typeof AppealsCaseIdRoute
   '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/appeals': typeof AppealsIndexRoute
   '/cases': typeof CasesIndexRoute
   '/console': typeof ConsoleIndexRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/metrics': typeof MetricsRoute
   '/appeals/$caseId': typeof AppealsCaseIdRoute
   '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/appeals/': typeof AppealsIndexRoute
   '/cases/': typeof CasesIndexRoute
   '/console/': typeof ConsoleIndexRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/appeals/$caseId'
     | '/console/$caseId'
+    | '/appeals/'
     | '/cases/'
     | '/console/'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/appeals/$caseId'
     | '/console/$caseId'
+    | '/appeals'
     | '/cases'
     | '/console'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/appeals/$caseId'
     | '/console/$caseId'
+    | '/appeals/'
     | '/cases/'
     | '/console/'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   MetricsRoute: typeof MetricsRoute
   AppealsCaseIdRoute: typeof AppealsCaseIdRoute
   ConsoleCaseIdRoute: typeof ConsoleCaseIdRoute
+  AppealsIndexRoute: typeof AppealsIndexRoute
   CasesIndexRoute: typeof CasesIndexRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
 }
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/metrics'
       fullPath: '/metrics'
       preLoaderRoute: typeof MetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/appeals/': {
+      id: '/appeals/'
+      path: '/appeals'
+      fullPath: '/appeals/'
+      preLoaderRoute: typeof AppealsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/appeals/$caseId': {
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   MetricsRoute: MetricsRoute,
   AppealsCaseIdRoute: AppealsCaseIdRoute,
   ConsoleCaseIdRoute: ConsoleCaseIdRoute,
+  AppealsIndexRoute: AppealsIndexRoute,
   CasesIndexRoute: CasesIndexRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
 }
