@@ -41,12 +41,12 @@ export function RiskPill({ score, showLabel = true }: { score: number; showLabel
 
 export function SeverityBadge({ severity }: { severity: string }) {
   const map: Record<string, string> = {
-    critical: bandClass.critical!,
-    high: bandClass.high!,
-    medium: bandClass.medium!,
-    low: bandClass.low!,
-    hard: bandClass.critical!,
-    soft: bandClass.medium!,
+    critical: bandClass["critical"]!,
+    high: bandClass["high"]!,
+    medium: bandClass["medium"]!,
+    low: bandClass["low"]!,
+    hard: bandClass["critical"]!,
+    soft: bandClass["medium"]!,
     info: "bg-muted text-muted-foreground",
   };
   return (
