@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as MetricsRouteImport } from './routes/metrics'
 import { Route as AppealsCaseIdRouteImport } from './routes/appeals.$caseId'
+import { Route as CasesIndexRouteImport } from './routes/cases.index'
 import { Route as ConsoleIndexRouteImport } from './routes/console.index'
 import { Route as ConsoleCaseIdRouteImport } from './routes/console.$caseId'
 
@@ -36,6 +37,11 @@ const AppealsCaseIdRoute = AppealsCaseIdRouteImport.update({
   path: '/appeals/$caseId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CasesIndexRoute = CasesIndexRouteImport.update({
+  id: '/cases/',
+  path: '/cases/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
   id: '/console/',
   path: '/console/',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/metrics': typeof MetricsRoute
   '/appeals/$caseId': typeof AppealsCaseIdRoute
   '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/cases/': typeof CasesIndexRoute
   '/console/': typeof ConsoleIndexRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/metrics': typeof MetricsRoute
   '/appeals/$caseId': typeof AppealsCaseIdRoute
   '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/cases': typeof CasesIndexRoute
   '/console': typeof ConsoleIndexRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/metrics': typeof MetricsRoute
   '/appeals/$caseId': typeof AppealsCaseIdRoute
   '/console/$caseId': typeof ConsoleCaseIdRoute
+  '/cases/': typeof CasesIndexRoute
   '/console/': typeof ConsoleIndexRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/appeals/$caseId'
     | '/console/$caseId'
+    | '/cases/'
     | '/console/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/appeals/$caseId'
     | '/console/$caseId'
+    | '/cases'
     | '/console'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/appeals/$caseId'
     | '/console/$caseId'
+    | '/cases/'
     | '/console/'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   MetricsRoute: typeof MetricsRoute
   AppealsCaseIdRoute: typeof AppealsCaseIdRoute
   ConsoleCaseIdRoute: typeof ConsoleCaseIdRoute
+  CasesIndexRoute: typeof CasesIndexRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
 }
 
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppealsCaseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cases/': {
+      id: '/cases/'
+      path: '/cases'
+      fullPath: '/cases/'
+      preLoaderRoute: typeof CasesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/console/': {
       id: '/console/'
       path: '/console'
@@ -161,18 +181,9 @@ const rootRouteChildren: RootRouteChildren = {
   MetricsRoute: MetricsRoute,
   AppealsCaseIdRoute: AppealsCaseIdRoute,
   ConsoleCaseIdRoute: ConsoleCaseIdRoute,
+  CasesIndexRoute: CasesIndexRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
