@@ -505,6 +505,30 @@ export async function getMetrics() {
   const fraudLossTotal = [...lossByActor.values()].reduce((a, b) => a + b, 0);
   const fraudLossAvoided = [...caughtActors].reduce((sum, id) => sum + (lossByActor.get(id) ?? 0), 0);
 
+  // Graph-rescued fraud: labelled fraud actors the transaction-only model would
+  // have missed at the same threshold, but the blended (graph) score catches.
+  const rescuedActors = engine.scored.filter(
+    (s) => fraudActors.has(s.actorId) && s.txnScore < RISK_THRESHOLD && s.riskScore >= RISK_THRESHOLD,
+  );
+  const rescuedLoss = rescuedActors.reduce((sum, s) => sum + (lossByActor.get(s.actorId) ?? 0), 0);
+  const rescued = {
+    count: rescuedActors.length,
+    loss: rescuedLoss,
+    shareOfCaught: caughtActors.size ? rescuedActors.length / caughtActors.size : 0,
+    actors: rescuedActors.slice(0, 12).map((s) => ({
+      actorId: s.actorId,
+      displayName: s.displayName,
+      role: s.role,
+      txnScore: s.txnScore,
+      graphScore: s.graphScore,
+      riskScore: s.riskScore,
+      ringId: s.ringId,
+      loss: lossByActor.get(s.actorId) ?? 0,
+    })),
+  };
+
+
+
   // fairness: action rate per cohort
   const actionedCases = new Set((actions ?? []).map((a) => a.case_id));
   const caseActor = new Map((cases ?? []).map((c) => [c.id, c.actor_id]));
