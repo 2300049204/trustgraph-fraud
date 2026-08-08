@@ -499,11 +499,13 @@ export interface ConfusionMetrics {
   tn: number;
 }
 
+export type ScoreMode = "txn" | "graph" | "blended";
+
 export function confusion(
   scored: ScoredActor[],
   labels: LabelRow[],
   threshold: number,
-  useGraph: boolean,
+  mode: ScoreMode,
   holdoutOnly = true,
 ): ConfusionMetrics {
   const labelMap = new Map(labels.map((l) => [l.actor_id, l]));
@@ -515,7 +517,7 @@ export function confusion(
     const l = labelMap.get(s.actorId);
     if (!l) continue;
     if (holdoutOnly && !l.is_holdout) continue;
-    const score = useGraph ? s.riskScore : s.txnScore;
+    const score = mode === "blended" ? s.riskScore : mode === "graph" ? s.graphScore : s.txnScore;
     const flagged = score >= threshold;
     if (flagged && l.is_fraud) tp += 1;
     else if (flagged && !l.is_fraud) fp += 1;
