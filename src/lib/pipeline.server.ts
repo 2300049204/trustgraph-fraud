@@ -576,6 +576,8 @@ export async function getMetrics() {
     threshold: RISK_THRESHOLD,
     blended,
     txnOnly,
+    graphOnly,
+    rescued,
     lift: {
       precision: blended.precision - txnOnly.precision,
       recall: blended.recall - txnOnly.recall,
