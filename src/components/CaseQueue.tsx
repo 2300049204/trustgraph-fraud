@@ -10,7 +10,7 @@ type SortKey = "risk" | "sla" | "graph" | "created";
 
 const ALL = "all";
 
-export function CaseQueue({ basePath }: { basePath: "/cases" | "/console" }) {
+export function CaseQueue() {
   const { data, isPending, error } = useQuery({
     queryKey: ["queue"],
     queryFn: () => fetchQueue(),
@@ -273,7 +273,7 @@ export function CaseQueue({ basePath }: { basePath: "/cases" | "/console" }) {
                     </td>
                     <td className="px-3 py-3">
                       <Link
-                        to={`${basePath}/$caseId`}
+                        to="/console/$caseId"
                         params={{ caseId: r.caseId }}
                         className="rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-muted"
                       >
